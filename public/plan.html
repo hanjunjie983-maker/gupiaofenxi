@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f766e" />
+  <title>范蠡罗盘 · 统一投资规划</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>统一投资规划中心</h1>
+    <p><a href="/">返回首页</a> · 股票 + 基金 + 仓位 + 时间表 + 情景模拟</p>
+  </header>
+  <main class="container">
+    <div class="searchbar">
+      <input id="capital" type="number" value="1000000" title="总资金" />
+      <select id="risk"><option value="conservative">保守</option><option value="balanced" selected>稳健</option><option value="aggressive">进取</option></select>
+      <input id="horizon" type="number" value="12" title="规划月数" />
+      <input id="maxdd" type="number" value="0.15" step="0.01" title="最大回撤" />
+      <button id="run">生成规划</button>
+    </div>
+    <section class="card"><h2>规划结果</h2><div id="plan" class="content">加载中…</div></section>
+  </main>
+  <footer class="footer">不承诺收益，不保证精准，不构成投资建议</footer>
+  <script src="/js/plan.js"></script>
+</body>
+</html>

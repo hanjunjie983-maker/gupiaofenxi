@@ -33,6 +33,7 @@ import { computeFanliV2 } from '../src/factors/fanli_v2.js';
 import { computeFanliSummary } from '../src/factors/fanli_summary.js';
 import { computeSmartRecommendation } from '../src/analysis/smart_recommendation.js';
 import { parsePingzhong, parseHoldings } from '../src/funds/fund_data.js';
+import { allocateSleeves, simulatePlan, buildSchedule } from '../src/planning/planner.js';
 import { buildFeatures, buildSamples, trainFactorProbability } from '../src/probability/factor_probability.js';
 import { resetRateLimits } from '../src/observability/rate_limit.js';
 import { listTools, runTool } from '../src/agent/tools.js';
@@ -1118,6 +1119,36 @@ test('fund page and API references are served', async () => {
     const js = await (await fetch(`${base}/js/fund.js`)).text();
     assert.ok(html.includes('基金分析'));
     assert.ok(js.includes('/v1/funds/'));
+  } finally {
+    server.close();
+  }
+});
+
+test('unified planner allocates capital across stocks funds and cash', () => {
+  const allocation = allocateSleeves({ capital: 1000000, riskLevel: 'balanced', stocks: [{ ticker: '600519', name: '贵州茅台', smart_score: 70 }, { ticker: '000001', name: '平安银行', smart_score: 60 }], funds: [{ code: '510300', name: '沪深300ETF', fund_score: 65 }] });
+  const total = allocation.stocks.reduce((s, x) => s + x.amount, 0) + allocation.funds.reduce((s, x) => s + x.amount, 0) + allocation.cash.amount;
+  assert.ok(Math.abs(total - 1000000) < 5);
+  assert.ok(allocation.stocks.every((x) => x.weight <= 0.08 + 1e-9));
+});
+
+test('unified planner scenario simulation and schedule are probability based', () => {
+  const sim = simulatePlan({ assets: [{ weight: 0.5, expectedAnnualReturn: 0.08, annualVolatility: 0.2 }, { weight: 0.4, expectedAnnualReturn: 0.05, annualVolatility: 0.15 }], capital: 1000000, horizonMonths: 12, simulations: 500, seed: 1 });
+  assert.ok(sim.scenarios.neutral.range[0] <= sim.scenarios.neutral.range[1]);
+  assert.ok(sim.risk.probability_of_loss >= 0 && sim.risk.probability_of_loss <= 1);
+  assert.ok(sim.disclaimer.includes('不是未来预测'));
+  const schedule = buildSchedule({ horizonMonths: 12, now: new Date('2026-09-17T00:00:00Z') });
+  assert.ok(schedule.length >= 4);
+  assert.equal(schedule[0].action, '首次建仓');
+});
+
+test('planning page is served and references planning API', async () => {
+  const server = createServer({ config: loadConfig(), store: createMemoryStore(), fetchImpl: mockFetch });
+  const base = await listen(server);
+  try {
+    const html = await (await fetch(`${base}/plan.html`)).text();
+    const js = await (await fetch(`${base}/js/plan.js`)).text();
+    assert.ok(html.includes('统一投资规划'));
+    assert.ok(js.includes('/v1/planning/center'));
   } finally {
     server.close();
   }
