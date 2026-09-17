@@ -34,6 +34,7 @@ import { getRoutingPlan } from './sources/router.js';
 import { computeMonitor } from './observability/monitor.js';
 import { analyzeTicker } from './analysis/analyzer.js';
 import { getDailyFundRanking, getFundDetail } from './funds/fund_ranking.js';
+import { getFundPortfolio } from './funds/fund_portfolio.js';
 import { generateUnifiedPlan } from './planning/planner.js';
 import { getWorthBuyingRanking, getDailyRecommendations, DEFAULT_WORTH_BUYING_TICKERS } from './rankings/worth_buying_ranking.js';
 import { researchTicker } from './agent/orchestrator.js';
@@ -712,6 +713,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`FanliQuant M0 API listening on http://${config.host}:${config.port}`);
   });
 }
+
 
 
 

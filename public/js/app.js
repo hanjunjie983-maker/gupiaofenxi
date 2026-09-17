@@ -137,6 +137,7 @@ function renderAnalysis(d) {
   const p = d.probability?.latest_prediction;
   const topFund = d.fund_holdings?.funds?.[0]?.fund_name;
   return `<div class="summary">
+    <p><strong>人话总结：</strong>${esc(d.plain_summary || '')}</p>
     <p><strong>一句话总结：</strong>${esc(d.name)}（${esc(d.ticker)}）当前价格 ${esc(d.price ?? '—')}，值得买概率 ${pct(w?.P_worth_buying)}（${levelText(w?.P_worth_buying)}）。</p>
     <p><strong>历史上涨概率：</strong>${p ? pct(p.P_positive_return) : '—'}；<strong>范蠡综合分：</strong>${d.fanli?.fanli_score === null || d.fanli?.fanli_score === undefined ? '—' : Number(d.fanli.fanli_score).toFixed(1)} / 10；<strong>持有基金示例：</strong>${esc(topFund || '暂无')}。</p>
     <p><strong>范蠡六维总评：</strong>${esc(d.fanli_summary?.label || '—')} · ${esc(d.fanli_summary?.recommendation || '—')} — ${esc(d.fanli_summary?.reason || '')}</p>
@@ -251,6 +252,7 @@ analyze();
 loadDashboard();
 loadRanking();
 loadWatchlist();
+
 
 
 

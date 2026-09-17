@@ -176,6 +176,7 @@ export async function generateUnifiedPlan({ store, config, fetchImpl, capital = 
 
   const plan = {
     as_of: new Date().toISOString().slice(0, 10),
+    plain_summary: `按你的资金和风险偏好，建议股票约 ${Math.round(allocation.allocation.stock_weight * 100)}%、基金约 ${Math.round(allocation.allocation.fund_weight * 100)}%、现金约 ${Math.round(allocation.allocation.cash_weight * 100)}%。未来金额是概率区间，不是保证收益，也不是某一天一定到某个价格。`,
     capital,
     risk_level: riskLevel,
     horizon_months: horizonMonths,
@@ -191,6 +192,7 @@ export async function generateUnifiedPlan({ store, config, fetchImpl, capital = 
   planCache.set(cacheKey, { at: Date.now(), value: plan });
   return { ...plan, cached: false };
 }
+
 
 
 

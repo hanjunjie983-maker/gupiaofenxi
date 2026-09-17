@@ -30,3 +30,4 @@ document.querySelectorAll('.tab').forEach((btn)=>btn.addEventListener('click',()
   document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
 }));
 loadAll();
+

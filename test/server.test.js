@@ -33,6 +33,7 @@ import { computeFanliV2 } from '../src/factors/fanli_v2.js';
 import { computeFanliSummary } from '../src/factors/fanli_summary.js';
 import { computeSmartRecommendation } from '../src/analysis/smart_recommendation.js';
 import { parsePingzhong, parseHoldings } from '../src/funds/fund_data.js';
+import { suggestFundPortfolio } from '../src/funds/fund_portfolio.js';
 import { allocateSleeves, simulatePlan, buildSchedule } from '../src/planning/planner.js';
 import { buildFeatures, buildSamples, trainFactorProbability } from '../src/probability/factor_probability.js';
 import { resetRateLimits } from '../src/observability/rate_limit.js';
@@ -1167,6 +1168,27 @@ test('unified center page and cross-page navigation are present', async () => {
     assert.ok(nav.includes('/plan.html'));
     assert.ok(appJs.includes('/fund.html?code='));
     assert.ok(fundJs.includes('/?ticker='));
+  } finally {
+    server.close();
+  }
+});
+
+test('fund portfolio suggestion allocates capital across funds and cash', () => {
+  const p = suggestFundPortfolio({ capital: 1000000, riskLevel: 'balanced', funds: [{ code: '510300', name: '沪深300ETF', fund_score: 70, action: '可分批配置' }, { code: '510500', name: '中证500ETF', fund_score: 60, action: '持有观察' }, { code: '159915', name: '创业板ETF', fund_score: 55, action: '持有观察' }, { code: '588000', name: '科创50ETF', fund_score: 50, action: '持有观察' }] });
+  const total = p.funds.reduce((s, x) => s + x.amount, 0) + p.cash.amount;
+  assert.ok(Math.abs(total - 1000000) < 5);
+  assert.ok(p.plain_summary.includes('不保证收益'));
+});
+
+test('glossary and fund portfolio UI are served', async () => {
+  const server = createServer({ config: loadConfig(), store: createMemoryStore(), fetchImpl: mockFetch });
+  const base = await listen(server);
+  try {
+    const glossary = await (await fetch(`${base}/glossary.html`)).text();
+    const fundJs = await (await fetch(`${base}/js/fund.js`)).text();
+    assert.ok(glossary.includes('名词解释'));
+    assert.ok(glossary.includes('值得买概率'));
+    assert.ok(fundJs.includes('/v1/funds/portfolio'));
   } finally {
     server.close();
   }

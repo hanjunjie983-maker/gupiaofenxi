@@ -5,7 +5,8 @@ const NAV_ITEMS = [
   { href: '/plan.html', label: '投资规划' },
   { href: '/backtest.html', label: '真实回测' },
   { href: '/portfolio.html', label: '组合优化' },
-  { href: '/sources.html', label: '数据源' }
+  { href: '/sources.html', label: '数据源' },
+  { href: '/glossary.html', label: '名词解释' }
 ];
 
 function renderNav() {
@@ -15,3 +16,4 @@ function renderNav() {
   host.innerHTML = `<nav class="main-nav">${NAV_ITEMS.map((item) => `<a class="${item.href === current ? 'active' : ''}" href="${item.href}">${item.label}</a>`).join('')}</nav>`;
 }
 renderNav();
+

@@ -137,6 +137,7 @@ export async function analyzeTicker({ ticker, market, industrySecid = '90.BK0477
   if (!industryR.ok) warnings.push(`行业景气获取失败：${industryR.error}`);
   if (!holdingsR.ok) warnings.push(`基金持仓获取失败：${holdingsR.error}`);
 
+  const plainSummary = `${valuation?.name || symbol}（${symbol}）当前价格 ${valuation?.price ?? '暂无'}。值得买概率 ${(worthBuying.P_worth_buying * 100).toFixed(1)}%，范蠡六维总评是“${fanliSummary.label} / ${fanliSummary.recommendation}”，智能建议是“${smartRecommendation.action}”。这不是保证涨，只是基于公开数据和历史统计的研究判断。`;
   return {
     ticker: symbol,
     market: usedMarket,
@@ -155,6 +156,7 @@ export async function analyzeTicker({ ticker, market, industrySecid = '90.BK0477
     backtest,
     worth_buying_probability: worthBuying,
     fanli_summary: fanliSummary,
+    plain_summary: plainSummary,
     smart_recommendation: smartRecommendation,
     position_advice: positionAdvice,
     drivers,
@@ -163,6 +165,7 @@ export async function analyzeTicker({ ticker, market, industrySecid = '90.BK0477
     disclaimer: '本报告仅基于公开数据与历史统计，不构成投资建议；概率非保证。'
   };
 }
+
 
 
 

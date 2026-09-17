@@ -114,9 +114,11 @@ export async function computeFundAnalysis({ fund, store, config, fetchImpl, capi
     修备风控: { score: Number(((riskScore * 0.6 + (agg?.risk ?? 50) * 0.4) / 10).toFixed(2)), note: '净值波动/回撤 + 持仓风险' }
   };
 
+  const topHoldingNames = (fund.holdings || []).slice(0, 3).map((h) => h.name).filter(Boolean).join('、');
   return {
     code: fund.code,
     name: fund.name,
+    plain_summary: `${fund.name} 主要买的是 ${topHoldingNames || '公开披露的持仓股票'}；综合评分 ${fundScore}/100，建议是“${action}”。基金评分越高只代表研究模型越看好，不代表一定赚钱。`,
     as_of: new Date().toISOString().slice(0, 10),
     fund_score: fundScore,
     action,
@@ -140,4 +142,5 @@ export async function computeFundAnalysis({ fund, store, config, fetchImpl, capi
     disclaimer: '基金评分与推荐为研究模型输出，不构成投资建议，不承诺收益。'
   };
 }
+
 
