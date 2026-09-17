@@ -32,6 +32,7 @@ import { pickLatest, CANDIDATE_TAGS } from '../src/factors/xbrl_map.js';
 import { computeFanliV2 } from '../src/factors/fanli_v2.js';
 import { computeFanliSummary } from '../src/factors/fanli_summary.js';
 import { computeSmartRecommendation } from '../src/analysis/smart_recommendation.js';
+import { parsePingzhong, parseHoldings } from '../src/funds/fund_data.js';
 import { buildFeatures, buildSamples, trainFactorProbability } from '../src/probability/factor_probability.js';
 import { resetRateLimits } from '../src/observability/rate_limit.js';
 import { listTools, runTool } from '../src/agent/tools.js';
@@ -1096,3 +1097,28 @@ test('computeSmartRecommendation combines modern factors and Fanli six dimension
   assert.ok(rec.disclaimer.includes('不构成投资建议'));
 });
 
+
+test('fund data parsers extract fund info and holdings', () => {
+  const ping = 'var fS_name = "测试基金";var syl_1n=12.5;var syl_3y=3.2;var Data_netWorthTrend=[{"x":1,"y":1},{"x":2,"y":1.1}];var Data_assetAllocation=[];var Data_currentFundManager=[];';
+  const info = parsePingzhong(ping);
+  assert.equal(info.name, '测试基金');
+  assert.equal(info.returns.oneYear, 12.5);
+  const html = `截止至：<font class='px12'>2026-06-30</font><table><tr><td>1</td><td><a>600519</a></td><td><a>贵州茅台</a></td><td>x</td><td>9.50%</td></tr></table>`;
+  const holdings = parseHoldings(html);
+  assert.equal(holdings.reportDate, '2026-06-30');
+  assert.equal(holdings.holdings[0].code, '600519');
+  assert.equal(holdings.holdings[0].weight, 0.095);
+});
+
+test('fund page and API references are served', async () => {
+  const server = createServer({ config: loadConfig(), store: createMemoryStore(), fetchImpl: mockFetch });
+  const base = await listen(server);
+  try {
+    const html = await (await fetch(`${base}/fund.html`)).text();
+    const js = await (await fetch(`${base}/js/fund.js`)).text();
+    assert.ok(html.includes('基金分析'));
+    assert.ok(js.includes('/v1/funds/'));
+  } finally {
+    server.close();
+  }
+});

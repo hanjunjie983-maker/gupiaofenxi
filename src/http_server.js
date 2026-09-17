@@ -33,6 +33,7 @@ import { listTools } from './agent/tools.js';
 import { getRoutingPlan } from './sources/router.js';
 import { computeMonitor } from './observability/monitor.js';
 import { analyzeTicker } from './analysis/analyzer.js';
+import { getDailyFundRanking, getFundDetail } from './funds/fund_ranking.js';
 import { getWorthBuyingRanking, getDailyRecommendations, DEFAULT_WORTH_BUYING_TICKERS } from './rankings/worth_buying_ranking.js';
 import { researchTicker } from './agent/orchestrator.js';
 
@@ -653,6 +654,25 @@ export function createServer(options = {}) {
         }
       }
 
+      if (method === 'GET' && url.pathname === '/v1/funds/daily') {
+        try {
+          const data = await getDailyFundRanking({ store, config, fetchImpl, capital: Number(url.searchParams.get('capital') || 1000000), riskLevel: url.searchParams.get('risk_level') || 'balanced' });
+          return sendJson(res, 200, { code: 0, data, meta: { retrieved_at: new Date().toISOString() } });
+        } catch (err) {
+          return sendJson(res, 400, { code: 40060, message: err.message });
+        }
+      }
+
+      const fundMatch = url.pathname.match(/^\/v1\/funds\/(\d{6})$/);
+      if (method === 'GET' && fundMatch) {
+        try {
+          const data = await getFundDetail({ code: fundMatch[1], store, config, fetchImpl, capital: Number(url.searchParams.get('capital') || 1000000), riskLevel: url.searchParams.get('risk_level') || 'balanced' });
+          return sendJson(res, 200, { code: 0, data, meta: { retrieved_at: new Date().toISOString() } });
+        } catch (err) {
+          return sendJson(res, 400, { code: 40061, message: err.message });
+        }
+      }
+
       return sendJson(res, 404, { code: 40404, message: 'not found' });
     } catch (err) {
       logger.error('unhandled_error', { request_id: requestId, path: url.pathname, error: err.message });
@@ -676,6 +696,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`FanliQuant M0 API listening on http://${config.host}:${config.port}`);
   });
 }
+
 
 
 
