@@ -3,8 +3,8 @@ function money(v){return v===null||v===undefined||!Number.isFinite(Number(v))?'�
 function pct(v,d=2){return v===null||v===undefined||!Number.isFinite(Number(v))?'—':`${(Number(v)*100).toFixed(d)}%`;}
 
 function renderPlan(d){
-  const stocks=(d.selected_stocks||[]).map(s=>`<tr><td>${esc(s.name)}<br><span class="missing">${esc(s.ticker)}</span></td><td>${esc(s.action||'—')}</td><td>${esc(s.score??'—')}</td><td>${pct(s.position?.weight)}</td><td>${money(s.position?.amount)}</td></tr>`).join('');
-  const funds=(d.selected_funds||[]).map(f=>`<tr><td>${esc(f.name)}<br><span class="missing">${esc(f.code)}</span></td><td>${esc(f.action||'—')}</td><td>${esc(f.score??'—')}</td><td>${pct(f.position?.weight)}</td><td>${money(f.position?.amount)}</td></tr>`).join('');
+  const stocks=(d.selected_stocks||[]).map(s=>`<tr><td><a href="/?ticker=${encodeURIComponent(s.ticker)}">${esc(s.name)}</a><br><span class="missing">${esc(s.ticker)}</span></td><td>${esc(s.action||'—')}</td><td>${esc(s.score??'—')}</td><td>${pct(s.position?.weight)}</td><td>${money(s.position?.amount)}</td></tr>`).join('');
+  const funds=(d.selected_funds||[]).map(f=>`<tr><td><a href="/fund.html?code=${encodeURIComponent(f.code)}">${esc(f.name)}</a><br><span class="missing">${esc(f.code)}</span></td><td>${esc(f.action||'—')}</td><td>${esc(f.score??'—')}</td><td>${pct(f.position?.weight)}</td><td>${money(f.position?.amount)}</td></tr>`).join('');
   const sim=d.simulation||{};
   const schedule=(d.schedule||[]).map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.action)}</td><td>${esc(x.note)}</td></tr>`).join('');
   return `<div class="summary"><p><strong>总资金：</strong>${money(d.capital)} 元 · <strong>风险：</strong>${esc(d.risk_level)} · <strong>期限：</strong>${esc(d.horizon_months)} 个月</p><p><strong>配置：</strong>股票 ${pct(d.allocation?.allocation?.stock_weight)} · 基金 ${pct(d.allocation?.allocation?.fund_weight)} · 现金 ${pct(d.allocation?.allocation?.cash_weight)}</p></div>
@@ -25,3 +25,4 @@ async function run(){
 }
 document.getElementById('run').addEventListener('click',run);
 run();
+

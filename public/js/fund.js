@@ -3,7 +3,7 @@ function pct(v, d=2) { return v===null||v===undefined||!Number.isFinite(Number(v
 function num(v,d=2){return v===null||v===undefined||!Number.isFinite(Number(v))?'—':Number(v).toFixed(d);}
 
 function renderFundDetail(d) {
-  const holdings = (d.holdings||[]).map((h)=>`<tr><td>${esc(h.name)}<br><span class="missing">${esc(h.code)}</span></td><td>${pct(h.weight)}</td><td>${esc(h.action||'—')}</td><td>${num(h.score)}</td><td>${num(h.fanli_score)}</td><td>${pct(h.worth_buying)}</td></tr>`).join('');
+  const holdings = (d.holdings||[]).map((h)=>`<tr><td><a href="/?ticker=${encodeURIComponent(h.code)}">${esc(h.name)}</a><br><span class="missing">${esc(h.code)}</span></td><td>${pct(h.weight)}</td><td>${esc(h.action||'—')}</td><td>${num(h.score)}</td><td>${num(h.fanli_score)}</td><td>${pct(h.worth_buying)}</td></tr>`).join('');
   const fanli = Object.entries(d.fanli||{}).map(([k,v])=>`<li>${esc(k)}：${num(v.score)}/10 <span class="missing">${esc(v.note)}</span></li>`).join('');
   return `<div class="summary"><p><strong>${esc(d.name)}（${esc(d.code)}）</strong></p><p>基金评分 ${num(d.fund_score)}/100 · ${esc(d.action)} · 建议仓位 ${pct(d.position_suggestion?.position_pct)} · 金额 ${esc(d.position_suggestion?.amount)} 元</p></div>
     <h3>基金范蠡六维</h3><ul>${fanli}</ul>
@@ -13,12 +13,13 @@ function renderFundDetail(d) {
 
 function renderFundRanking(data) {
   if (!data?.results?.length) return '<span class="missing">暂无基金数据</span>';
-  const rows = data.results.map((f,i)=>`<tr><td>${i+1}</td><td>${esc(f.name)}<br><span class="missing">${esc(f.code)}</span></td><td>${num(f.fund_score)}</td><td>${esc(f.action)}</td><td>${pct(f.position_suggestion?.position_pct)}</td></tr>`).join('');
+  const rows = data.results.map((f,i)=>`<tr><td>${i+1}</td><td><a href="/fund.html?code=${encodeURIComponent(f.code)}">${esc(f.name)}</a><br><span class="missing">${esc(f.code)}</span></td><td>${num(f.fund_score)}</td><td>${esc(f.action)}</td><td>${pct(f.position_suggestion?.position_pct)}</td></tr>`).join('');
   return `<p>${esc(data.date)} · ${data.cached?'缓存':'实时计算'} · ${esc(data.note)}</p><table><thead><tr><th>#</th><th>基金</th><th>评分</th><th>建议</th><th>建议仓位</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function queryFund() {
-  const code = document.getElementById('fund-code').value.trim();
+  const code = new URLSearchParams(location.search).get('code') || document.getElementById('fund-code').value.trim();
+  document.getElementById('fund-code').value = code;
   const capital = document.getElementById('fund-capital').value || 1000000;
   const risk = document.getElementById('fund-risk').value;
   const el = document.getElementById('fund-detail');
@@ -43,3 +44,4 @@ async function loadRanking() {
 document.getElementById('fund-query').addEventListener('click', queryFund);
 queryFund();
 loadRanking();
+

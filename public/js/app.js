@@ -97,7 +97,7 @@ function renderFundamentals(rec) {
 
 function renderFundHoldings(f) {
   if (!f || !f.funds?.length) return missing('暂无公开基金持仓数据');
-  const rows = f.funds.slice(0, 5).map((x) => `<tr><td>${esc(x.fund_name)}</td><td>${esc(x.fund_company)}</td><td>${pct(x.shares_ratio, 3)}</td></tr>`).join('');
+  const rows = f.funds.slice(0, 5).map((x) => `<tr><td><a href="/fund.html?code=${encodeURIComponent(x.fund_code || '')}">${esc(x.fund_name)}</a></td><td>${esc(x.fund_company)}</td><td>${pct(x.shares_ratio, 3)}</td></tr>`).join('');
   return `<p>报告期 ${esc(f.report_date)} · 共 ${esc(f.count)} 只基金持有（展示前 5）</p>
     <table><thead><tr><th>基金名称</th><th>基金公司</th><th>持股比例</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -161,7 +161,8 @@ function getWatchlist() { try { return JSON.parse(localStorage.getItem('fanli_wa
 function setWatchlist(list) { localStorage.setItem('fanli_watchlist', JSON.stringify([...new Set(list)])); }
 
 async function analyze() {
-  const ticker = document.getElementById('ticker').value.trim();
+  const ticker = new URLSearchParams(location.search).get('ticker') || document.getElementById('ticker').value.trim();
+  document.getElementById('ticker').value = ticker;
   const el = document.getElementById('report');
   el.textContent = '正在分析，请稍候…';
   try {
@@ -188,7 +189,7 @@ function renderRanking(data) {
   if (!data || !data.results?.length) return missing('暂无排行数据');
   const rows = data.results.map((r, i) => `<tr>
     <td>${i + 1}</td>
-    <td>${esc(r.name)}<br><span class="missing">${esc(r.ticker)}</span></td>
+    <td><a href="/?ticker=${encodeURIComponent(r.ticker)}">${esc(r.name)}</a><br><span class="missing">${esc(r.ticker)}</span></td>
     <td><strong>${pct(r.P_worth_buying)}</strong><br><span class="missing">${r.calibrated ? '已校准' : '启发式'}</span></td>
     <td>${esc(r.suggestion || '—')}<br><span class="missing">${esc(r.stock_type || '')}</span></td>
     <td>${esc(r.smart_action || '—')}<br><span class="missing">评分 ${esc(r.smart_score ?? '—')}</span></td>
@@ -250,6 +251,7 @@ analyze();
 loadDashboard();
 loadRanking();
 loadWatchlist();
+
 
 
 

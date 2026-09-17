@@ -101,3 +101,12 @@ summary { cursor: pointer; color: var(--accent); font-weight: 600; }
   .card { padding: 12px; }
   table { min-width: 560px; }
 }
+
+.main-nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 20px; background: #ffffff; border-bottom: 1px solid var(--line); }
+.main-nav a { color: var(--ink); text-decoration: none; padding: 6px 10px; border-radius: 8px; font-size: 14px; }
+.main-nav a:hover { background: #f0fdfa; color: var(--accent); }
+.main-nav a.active { background: var(--accent); color: white; }
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.tab { padding: 8px 14px; border: 1px solid var(--line); background: white; border-radius: 8px; cursor: pointer; }
+.tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+.hidden { display: none; }

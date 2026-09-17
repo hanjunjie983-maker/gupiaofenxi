@@ -1153,3 +1153,21 @@ test('planning page is served and references planning API', async () => {
     server.close();
   }
 });
+
+test('unified center page and cross-page navigation are present', async () => {
+  const server = createServer({ config: loadConfig(), store: createMemoryStore(), fetchImpl: mockFetch });
+  const base = await listen(server);
+  try {
+    const center = await (await fetch(`${base}/center.html`)).text();
+    const nav = await (await fetch(`${base}/js/nav.js`)).text();
+    const appJs = await (await fetch(`${base}/js/app.js`)).text();
+    const fundJs = await (await fetch(`${base}/js/fund.js`)).text();
+    assert.ok(center.includes('统一投资中心'));
+    assert.ok(nav.includes('/fund.html'));
+    assert.ok(nav.includes('/plan.html'));
+    assert.ok(appJs.includes('/fund.html?code='));
+    assert.ok(fundJs.includes('/?ticker='));
+  } finally {
+    server.close();
+  }
+});
