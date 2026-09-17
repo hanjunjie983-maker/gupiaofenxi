@@ -9,6 +9,7 @@ import { runRealBacktest } from '../backtest/real_backtest.js';
 import { computeWorthBuyingProbability } from './worth_buying.js';
 import { computePositionAdvice } from './position_advice.js';
 import { computeFanliSummary } from '../factors/fanli_summary.js';
+import { computeSmartRecommendation } from './smart_recommendation.js';
 
 function inferMarket(ticker) {
   const t = String(ticker).replace(/^(sh|sz|bj)\./i, '');
@@ -92,6 +93,7 @@ export async function analyzeTicker({ ticker, market, industrySecid = '90.BK0477
 
   const worthBuying = computeWorthBuyingProbability({ probability, valuation: valuation || {}, industry: industry || {}, fanli, backtest, risks });
   const fanliSummary = computeFanliSummary({ fanli, worthBuying: worthBuying.P_worth_buying, risks });
+
   const positionAdvice = computePositionAdvice({
     worth_buying: worthBuying.P_worth_buying,
     fanli,
@@ -101,6 +103,18 @@ export async function analyzeTicker({ ticker, market, industrySecid = '90.BK0477
     industry: industry || {},
     capital,
     riskLevel
+  });
+  const smartRecommendation = computeSmartRecommendation({
+    fanli,
+    fanliSummary,
+    worthBuying: worthBuying.P_worth_buying,
+    probability,
+    backtest,
+    valuation: valuation || {},
+    industry: industry || {},
+    risks,
+    positionAdvice,
+    volatility: priceFactors.vol_20d?.raw ?? null
   });
 
   const sources = [klineTry.ok ? klineTry.value : null, valuation, industry, fundHoldings].filter(Boolean).map((x) => ({
@@ -141,6 +155,7 @@ export async function analyzeTicker({ ticker, market, industrySecid = '90.BK0477
     backtest,
     worth_buying_probability: worthBuying,
     fanli_summary: fanliSummary,
+    smart_recommendation: smartRecommendation,
     position_advice: positionAdvice,
     drivers,
     risks,
@@ -148,5 +163,7 @@ export async function analyzeTicker({ ticker, market, industrySecid = '90.BK0477
     disclaimer: '本报告仅基于公开数据与历史统计，不构成投资建议；概率非保证。'
   };
 }
+
+
 
 

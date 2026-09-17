@@ -31,6 +31,7 @@ import { fundamentalFactors, mergeFactorSets } from '../src/factors/fundamental.
 import { pickLatest, CANDIDATE_TAGS } from '../src/factors/xbrl_map.js';
 import { computeFanliV2 } from '../src/factors/fanli_v2.js';
 import { computeFanliSummary } from '../src/factors/fanli_summary.js';
+import { computeSmartRecommendation } from '../src/analysis/smart_recommendation.js';
 import { buildFeatures, buildSamples, trainFactorProbability } from '../src/probability/factor_probability.js';
 import { resetRateLimits } from '../src/observability/rate_limit.js';
 import { listTools, runTool } from '../src/agent/tools.js';
@@ -723,7 +724,7 @@ test('computeFanliV2 computes quality dimension from fundamentals', () => {
   assert.equal(fanli.dimensions['择人任时'].status, 'computed');
   assert.equal(fanli.dimensions['待乏需求'].status, 'computed');
   assert.ok(fanli.coverage > 0);
-  assert.equal(fanli.status, 'partial');
+  assert.equal(fanli.status, 'partial_estimated');
 });
 
 function factorAssets(n = 30, seed = 42) {
@@ -1074,3 +1075,24 @@ test('computeFanliSummary produces a plain recommendation summary', () => {
   const missing = computeFanliSummary({ fanli: { fanli_score: 6.0, coverage: 0.4 } });
   assert.equal(missing.recommendation, '暂不判断');
 });
+
+test('computeSmartRecommendation combines modern factors and Fanli six dimensions', () => {
+  const rec = computeSmartRecommendation({
+    fanli: { fanli_score: 7.2, data_completeness: 1, estimated_dimensions: [] },
+    fanliSummary: { label: '较好' },
+    worthBuying: 0.62,
+    probability: { latest_prediction: { P_positive_return: 0.58 } },
+    backtest: { metrics: { sharpe: 0.8 } },
+    valuation: { price: 100, pe: 18 },
+    industry: { cycle_score: 0.6 },
+    risks: [],
+    positionAdvice: { suggested_position_pct: 0.1, suggested_amount: 100000, risk_budget_amount: 20000 },
+    volatility: 0.25
+  });
+  assert.equal(rec.action, '可分批建仓 / 重点关注');
+  assert.ok(rec.score > 60);
+  assert.ok(rec.buy_signals.length >= 6);
+  assert.ok(rec.entry_plan.length >= 3);
+  assert.ok(rec.disclaimer.includes('不构成投资建议'));
+});
+

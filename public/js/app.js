@@ -114,6 +114,24 @@ function renderPositionAdvice(a) {
   </div>`;
 }
 
+function renderSmartRecommendation(s) {
+  if (!s) return missing('智能建议数据不足');
+  const signalList = (arr, okText, badText) => (arr || []).map((x) => `<li>${x.pass ? '✅' : '—'} ${esc(x.label)} <span class="missing">${esc(x.pass ? okText : badText)}</span></li>`).join('');
+  const entries = (s.entry_plan || []).map((x) => `<tr><td>${esc(x.name)}</td><td>${esc(x.low)} ~ ${esc(x.high)}</td><td>${esc(x.note)}</td></tr>`).join('');
+  return `<div class="summary">
+    <p><strong>智能建议：</strong>${esc(s.action)} · 综合评分 ${esc(s.score)}/100 · 置信度 ${esc(s.confidence)}</p>
+    ${s.position_suggestion ? `<p><strong>仓位参考：</strong>${pct(s.position_suggestion.position_pct)} · 金额 ${esc(s.position_suggestion.amount)} 元 · 风险预算 ${esc(s.position_suggestion.risk_budget_amount)} 元</p>` : ''}
+    <p><strong>理由：</strong>${esc((s.reasons || []).join(' · '))}</p>
+    <details><summary>展开：买入/卖出信号</summary>
+      <p><strong>买入条件：</strong></p><ul>${signalList(s.buy_signals, '满足', '未满足')}</ul>
+      <p><strong>卖出/减仓条件：</strong></p><ul>${signalList(s.sell_signals, '触发', '未触发')}</ul>
+    </details>
+    <details><summary>展开：价格区间与风险计划</summary><table><thead><tr><th>区域</th><th>价格区间</th><th>说明</th></tr></thead><tbody>${entries}</tbody></table></details>
+    <p class="warn">${esc((s.warnings || []).join('；'))}</p>
+    <p class="warn">${esc(s.disclaimer)}</p>
+  </div>`;
+}
+
 function renderAnalysis(d) {
   const w = d.worth_buying_probability;
   const p = d.probability?.latest_prediction;
@@ -126,6 +144,7 @@ function renderAnalysis(d) {
   </div>
   <h3>1. 值得买概率</h3>${renderWorthBuying(w)}
   <h3>2. 买入金额与建仓建议（研究用）</h3>${renderPositionAdvice(d.position_advice)}
+  <h3>2.1 智能买卖建议（现代因子 + 范蠡六维 + 概率/回测）</h3>${renderSmartRecommendation(d.smart_recommendation)}
   <h3>3. 范蠡六维评分</h3>${renderFanliTable(d.fanli || {})}
   <div class="summary"><p><strong>范蠡六维总评：</strong>${esc(d.fanli_summary?.label || '—')} · <strong>${esc(d.fanli_summary?.recommendation || '—')}</strong></p><p>${esc(d.fanli_summary?.reason || '')}</p><p class="warn">${esc(d.fanli_summary?.disclaimer || '仅为研究辅助判断，不构成投资建议。')}</p></div>
   <details><summary>展开：财务数据（用于完物质量/无息币周转）</summary>${renderFundamentals(d.fundamentals)}</details>
@@ -172,12 +191,13 @@ function renderRanking(data) {
     <td>${esc(r.name)}<br><span class="missing">${esc(r.ticker)}</span></td>
     <td><strong>${pct(r.P_worth_buying)}</strong><br><span class="missing">${r.calibrated ? '已校准' : '启发式'}</span></td>
     <td>${esc(r.suggestion || '—')}<br><span class="missing">${esc(r.stock_type || '')}</span></td>
+    <td>${esc(r.smart_action || '—')}<br><span class="missing">评分 ${esc(r.smart_score ?? '—')}</span></td>
     <td>${esc(r.fanli_summary?.label || '—')}<br><span class="missing">${esc(r.fanli_summary?.recommendation || '')}</span></td>
     <td>${esc(rankingReason(r))}</td>
     <td>${r.fund_holdings?.status === 'ok' ? esc((r.fund_holdings.funds || []).slice(0, 2).map((f) => f.fund_name).join('、') || '—') : '未接入'}</td>
   </tr>`).join('');
   return `<p>截至 ${esc(data.as_of)} · ${data.cached ? '缓存结果' : '实时计算'} · 概率越高只表示历史统计倾向越强，不是必涨。</p>
-    <table><thead><tr><th>排名</th><th>股票</th><th>值得买概率</th><th>建议</th><th>范蠡总评</th><th>简单理由</th><th>持有基金（示例）</th></tr></thead><tbody>${rows}</tbody></table>`;
+    <table><thead><tr><th>排名</th><th>股票</th><th>值得买概率</th><th>建议</th><th>智能买卖</th><th>范蠡总评</th><th>简单理由</th><th>持有基金（示例）</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function loadRanking(tickers) {
@@ -230,6 +250,8 @@ analyze();
 loadDashboard();
 loadRanking();
 loadWatchlist();
+
+
 
 
 

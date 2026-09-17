@@ -46,6 +46,8 @@ export async function getWorthBuyingRanking({ tickers = DEFAULT_WORTH_BUYING_TIC
         risks: report.risks || [],
         suggestion: report.position_advice?.suggestion || null,
         fanli_summary: report.fanli_summary || null,
+        smart_action: report.smart_recommendation?.action || null,
+        smart_score: report.smart_recommendation?.score ?? null,
         stock_type: report.position_advice?.stock_type || null,
         suggested_position_pct: report.position_advice?.suggested_position_pct ?? null,
         suggested_amount: report.position_advice?.suggested_amount ?? null,
@@ -73,6 +75,7 @@ export async function getDailyRecommendations(args = {}) {
   cache.set(key, { at: Date.now(), value });
   return { ...value, cached: false };
 }
+
 
 
 
