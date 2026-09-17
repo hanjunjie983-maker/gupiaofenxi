@@ -121,11 +121,13 @@ function renderAnalysis(d) {
   return `<div class="summary">
     <p><strong>一句话总结：</strong>${esc(d.name)}（${esc(d.ticker)}）当前价格 ${esc(d.price ?? '—')}，值得买概率 ${pct(w?.P_worth_buying)}（${levelText(w?.P_worth_buying)}）。</p>
     <p><strong>历史上涨概率：</strong>${p ? pct(p.P_positive_return) : '—'}；<strong>范蠡综合分：</strong>${d.fanli?.fanli_score === null || d.fanli?.fanli_score === undefined ? '—' : Number(d.fanli.fanli_score).toFixed(1)} / 10；<strong>持有基金示例：</strong>${esc(topFund || '暂无')}。</p>
+    <p><strong>范蠡六维总评：</strong>${esc(d.fanli_summary?.label || '—')} · ${esc(d.fanli_summary?.recommendation || '—')} — ${esc(d.fanli_summary?.reason || '')}</p>
     <p class="warn">这不是保证涨，只是基于公开数据和历史统计的倾向判断。</p>
   </div>
   <h3>1. 值得买概率</h3>${renderWorthBuying(w)}
   <h3>2. 买入金额与建仓建议（研究用）</h3>${renderPositionAdvice(d.position_advice)}
   <h3>3. 范蠡六维评分</h3>${renderFanliTable(d.fanli || {})}
+  <div class="summary"><p><strong>范蠡六维总评：</strong>${esc(d.fanli_summary?.label || '—')} · <strong>${esc(d.fanli_summary?.recommendation || '—')}</strong></p><p>${esc(d.fanli_summary?.reason || '')}</p><p class="warn">${esc(d.fanli_summary?.disclaimer || '仅为研究辅助判断，不构成投资建议。')}</p></div>
   <details><summary>展开：财务数据（用于完物质量/无息币周转）</summary>${renderFundamentals(d.fundamentals)}</details>
   <h3>4. 历史上涨概率</h3>${renderProbability(d.probability)}
   <h3>5. 历史回测</h3>${renderBacktest(d.backtest)}
@@ -170,11 +172,12 @@ function renderRanking(data) {
     <td>${esc(r.name)}<br><span class="missing">${esc(r.ticker)}</span></td>
     <td><strong>${pct(r.P_worth_buying)}</strong><br><span class="missing">${r.calibrated ? '已校准' : '启发式'}</span></td>
     <td>${esc(r.suggestion || '—')}<br><span class="missing">${esc(r.stock_type || '')}</span></td>
+    <td>${esc(r.fanli_summary?.label || '—')}<br><span class="missing">${esc(r.fanli_summary?.recommendation || '')}</span></td>
     <td>${esc(rankingReason(r))}</td>
     <td>${r.fund_holdings?.status === 'ok' ? esc((r.fund_holdings.funds || []).slice(0, 2).map((f) => f.fund_name).join('、') || '—') : '未接入'}</td>
   </tr>`).join('');
   return `<p>截至 ${esc(data.as_of)} · ${data.cached ? '缓存结果' : '实时计算'} · 概率越高只表示历史统计倾向越强，不是必涨。</p>
-    <table><thead><tr><th>排名</th><th>股票</th><th>值得买概率</th><th>建议</th><th>简单理由</th><th>持有基金（示例）</th></tr></thead><tbody>${rows}</tbody></table>`;
+    <table><thead><tr><th>排名</th><th>股票</th><th>值得买概率</th><th>建议</th><th>范蠡总评</th><th>简单理由</th><th>持有基金（示例）</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function loadRanking(tickers) {
@@ -227,6 +230,7 @@ analyze();
 loadDashboard();
 loadRanking();
 loadWatchlist();
+
 
 
 

@@ -30,6 +30,7 @@ import { SecCompanyFactsConnector } from '../src/ingest/edgar_facts.js';
 import { fundamentalFactors, mergeFactorSets } from '../src/factors/fundamental.js';
 import { pickLatest, CANDIDATE_TAGS } from '../src/factors/xbrl_map.js';
 import { computeFanliV2 } from '../src/factors/fanli_v2.js';
+import { computeFanliSummary } from '../src/factors/fanli_summary.js';
 import { buildFeatures, buildSamples, trainFactorProbability } from '../src/probability/factor_probability.js';
 import { resetRateLimits } from '../src/observability/rate_limit.js';
 import { listTools, runTool } from '../src/agent/tools.js';
@@ -1063,3 +1064,13 @@ test('computeWorthBuyingProbability returns composite probability and CI', () =>
 
 
 
+
+test('computeFanliSummary produces a plain recommendation summary', () => {
+  const strong = computeFanliSummary({ fanli: { fanli_score: 8.0, coverage: 1 }, worthBuying: 0.68, risks: [] });
+  assert.equal(strong.label, '优秀');
+  assert.equal(strong.recommendation, '可重点研究');
+  const weak = computeFanliSummary({ fanli: { fanli_score: 3.0, coverage: 1 }, worthBuying: 0.2, risks: ['高波动', '回撤大'] });
+  assert.equal(weak.recommendation, '暂不推荐');
+  const missing = computeFanliSummary({ fanli: { fanli_score: 6.0, coverage: 0.4 } });
+  assert.equal(missing.recommendation, '暂不判断');
+});
