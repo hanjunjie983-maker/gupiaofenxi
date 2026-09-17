@@ -86,3 +86,18 @@ summary { cursor: pointer; color: var(--accent); font-weight: 600; }
 
 .searchbar input, .searchbar select { padding: 10px; border: 1px solid var(--line); border-radius: 8px; }
 .searchbar input[type="number"] { max-width: 140px; }
+
+/* 手机端适配：搜索栏、表格、卡片在小屏上更好用 */
+.content { overflow-x: auto; }
+@media (max-width: 720px) {
+  .topbar { padding: 16px; }
+  .topbar h1 { font-size: 20px; }
+  .topbar p { font-size: 13px; }
+  .container, .grid { padding: 12px; }
+  .grid { grid-template-columns: 1fr; }
+  .searchbar { flex-direction: column; align-items: stretch; }
+  .searchbar input, .searchbar select, .searchbar button { width: 100%; max-width: none; }
+  .kv { grid-template-columns: 1fr; }
+  .card { padding: 12px; }
+  table { min-width: 560px; }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "范蠡罗盘 · 股票分析",
+  "short_name": "范蠡罗盘",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f2ea",
+  "theme_color": "#0f766e",
+  "lang": "zh-CN"
+}

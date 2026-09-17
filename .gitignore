@@ -3,3 +3,7 @@ cloudflared.exe
 *.log
 .DS_Store
 .env
+.deploy_key*
+git-ssh-deploy.cmd
+
+.deploy_key*.pub

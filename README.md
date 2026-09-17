@@ -21,7 +21,7 @@ http://127.0.0.1:8787/
 ## 运行
 
 ```bash
-node src/server.js
+node src/http_server.js
 node test/server.test.js
 ```
 
@@ -34,3 +34,4 @@ node test/server.test.js
 ## 免责声明
 
 不构成投资建议；概率非保证；基金持仓来自公开披露，可能有滞后。
+

@@ -1,4 +1,4 @@
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/http_server.js';
 import { loadConfig } from '../src/config.js';
 import { createMemoryStore } from '../src/store/memory.js';
 import { mulberry32 } from '../src/probability/math.js';
@@ -55,3 +55,4 @@ try {
 } finally {
   server.close();
 }
+

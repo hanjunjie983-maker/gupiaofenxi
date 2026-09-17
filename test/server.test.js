@@ -1,7 +1,7 @@
 process.env.LOG_LEVEL = 'silent';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/http_server.js';
 import { loadConfig } from '../src/config.js';
 import { createMemoryStore } from '../src/store/memory.js';
 import { SecEdgarConnector } from '../src/ingest/edgar.js';
@@ -1059,6 +1059,7 @@ test('computeWorthBuyingProbability returns composite probability and CI', () =>
   assert.ok(w.calibration.brier_skill !== undefined);
   assert.ok(w.note.includes('不构成买入建议'));
 });
+
 
 
 

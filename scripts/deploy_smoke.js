@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/http_server.js';
 import { loadConfig } from '../src/config.js';
 import { createMemoryStore } from '../src/store/memory.js';
 
@@ -32,3 +32,4 @@ try {
 } finally {
   server.close();
 }
+

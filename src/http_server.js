@@ -663,7 +663,7 @@ export function createServer(options = {}) {
   return server;
 }
 
-// Direct-run entrypoint: `node src/server.js`
+// Direct-run entrypoint: `node src/http_server.js`
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = loadConfig();
   let store = createMemoryStore();
@@ -676,6 +676,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`FanliQuant M0 API listening on http://${config.host}:${config.port}`);
   });
 }
+
 
 
 
