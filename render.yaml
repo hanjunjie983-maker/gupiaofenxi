@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: fanli-quant
+    env: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health/ready
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: RATE_LIMIT_PER_MINUTE
+        value: 240
+      - key: EDGAR_USER_AGENT
+        value: FanliQuant/26.0 (research; contact@example.com)
+      - key: SOURCE_MODE
+        value: official_first

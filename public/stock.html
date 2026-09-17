@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>范蠡罗盘 · 个股页</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>个股研究</h1>
+    <p><a href="/">返回首页</a> · 概率非保证，不构成投资建议</p>
+  </header>
+
+  <main class="container">
+    <div class="searchbar">
+      <input id="ticker" placeholder="输入 ticker，例如 AAPL 或 600519" value="AAPL" />
+      <button id="query">查询</button>
+    </div>
+
+    <section class="card">
+      <h2>范蠡六维 V3</h2>
+      <div id="fanli" class="content">尚未查询</div>
+    </section>
+
+    <section class="card">
+      <h2>基本面 / 财报</h2>
+      <div id="fundamentals" class="content">尚未查询</div>
+    </section>
+
+    <section class="card">
+      <h2>估值</h2>
+      <div id="valuation" class="content">尚未查询</div>
+    </section>
+
+    <section class="card">
+      <h2>行业景气</h2>
+      <div id="industry" class="content">尚未查询</div>
+    </section>
+
+    <section class="card">
+      <h2>全因子表</h2>
+      <div id="factor-table" class="content">尚未查询</div>
+    </section>
+
+    <section class="card">
+      <h2>概率输出 V2</h2>
+      <div id="probability" class="content">尚未查询</div>
+    </section>
+  </main>
+
+  <footer class="footer">数据来源与时间戳随各接口返回；本平台不构成投资建议</footer>
+  <script src="/js/stock.js"></script>
+</body>
+</html>
+

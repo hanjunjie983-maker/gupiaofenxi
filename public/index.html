@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>范蠡罗盘 · 股票分析</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>范蠡罗盘 · 股票分析 · 一眼看懂</h1>
+    <p>输入股票代码，直接看结论、概率、风险和基金持仓 · 非投资建议</p>
+  </header>
+
+  <main class="container">
+    <div class="searchbar">
+      <input id="ticker" placeholder="股票代码，例如 600519" value="600519" />
+      <input id="capital" type="number" value="1000000" title="总资金（元）" />
+      <select id="risk-level">
+        <option value="conservative">保守</option>
+        <option value="balanced" selected>稳健</option>
+        <option value="aggressive">进取</option>
+      </select>
+      <button id="analyze">开始分析</button>
+      <button id="collect" class="secondary">收藏当前</button>
+    </div>
+
+    <section class="card" id="report-card">
+      <h2>一句话总结</h2>
+      <div id="report" class="content">点击“开始分析”</div>
+    </section>
+
+    <section class="card">
+      <div class="row-between">
+        <h2>今日值得看的十支股票</h2>
+        <button id="refresh-ranking" class="secondary">刷新</button>
+      </div>
+      <div id="ranking" class="content">加载中…</div>
+    </section>
+
+    <section class="card">
+      <h2>我的收藏排名</h2>
+      <div id="watchlist" class="content">加载中…</div>
+    </section>
+  </main>
+
+  <main class="grid">
+    <section class="card"><h2>市场温度</h2><div class="content" data-bind="market_temperature"></div></section>
+    <section class="card"><h2>范蠡周期罗盘</h2><div class="content" data-bind="fanli_compass"></div></section>
+    <section class="card"><h2>概率仪表盘</h2><div class="content" data-bind="probability_snapshot"></div></section>
+    <section class="card"><h2>风险预警</h2><div class="content" data-bind="risk_warning"></div></section>
+    <section class="card"><h2>数据源健康度</h2><div class="content" data-bind="source_health"></div></section>
+    <section class="card"><h2>合规提示</h2><div class="content" data-bind="compliance_reminder"></div></section>
+  </main>
+
+  <footer class="footer">
+    <a href="/stock.html">个股分模块</a> · <a href="/backtest.html">真实回测</a> · <a href="/portfolio.html">组合优化</a> · <a href="/sources.html">数据源</a> · 不构成投资建议
+  </footer>
+  <script src="/js/app.js"></script>
+</body>
+</html>
+
+
+
+

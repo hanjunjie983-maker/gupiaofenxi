@@ -1,0 +1,11 @@
+const u = 'http://datapc.eastmoney.com/emdatacenter/jgcc/detail?type=jjin&code=SH600519&name=%E8%B4%B5%E5%B7%9E%E8%8C%85%E5%8F%B0&date=2025-06-30';
+const r = await fetch(u, { headers: { 'User-Agent': 'FanliQuant/25.0' } });
+const buf = Buffer.from(await r.arrayBuffer());
+const t = buf.toString('latin1');
+console.log('status', r.status, 'len', t.length);
+const scripts = [...t.matchAll(/<script[^>]*src=["']([^"']+)["']/gi)].map(m=>m[1]);
+console.log('SCRIPTS\n'+scripts.join('\n'));
+const inline = [...t.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
+console.log('INLINE_HITS');
+console.log([...inline.matchAll(/(RPT_[A-Z0-9_]+|https?:\/\/[^"'<> ]+|url\s*:\s*["'][^"']+["']|ajax[^;]+)/gi)].map(m=>m[0]).slice(0,50).join('\n'));
+console.log(inline.slice(0,1500));

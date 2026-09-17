@@ -1,0 +1,38 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      RATE_LIMIT_PER_MINUTE: 240
+      EDGAR_USER_AGENT: "FanliQuant/19.0 (research; contact@example.com)"
+      LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional: enable after `npm i pg` and set DATABASE_URL on app.
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["full"]
+    environment:
+      POSTGRES_DB: fanli
+      POSTGRES_USER: fanli
+      POSTGRES_PASSWORD: fanli
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["full"]
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:

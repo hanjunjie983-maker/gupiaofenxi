@@ -1,0 +1,21 @@
+{
+  "name": "fanli-quant",
+  "version": "24.1.0",
+  "description": "范蠡量化股票研究平台 - 生产化收口版",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node test/server.test.js",
+    "test:frontend": "node scripts/frontend_smoke.js",
+    "test:deploy": "node scripts/deploy_smoke.js",
+    "test:e2e": "node scripts/e2e_acceptance.js",
+    "test:final": "node scripts/final_acceptance.js",
+    "test:network": "node scripts/fetch_edgar_real.js",
+    "test:postgres": "node scripts/smoke_postgres.js",
+    "ingest:ashare": "node scripts/ingest_ashare_csv.js",
+    "verify": "node scripts/verify_integration.js"
+  }
+}
+
