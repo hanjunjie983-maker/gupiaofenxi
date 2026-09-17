@@ -1,7 +1,13 @@
 {
-  "outputDirectory": "public",
-  "rewrites": [
-    { "source": "/v1/(.*)", "destination": "/api/v1/$1" }
+  "version": 2,
+  "builds": [
+    { "src": "api/v1/[...path].js", "use": "@vercel/node" },
+    { "src": "public/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/v1/(.*)", "dest": "/api/v1/$1" },
+    { "src": "/", "dest": "/public/index.html" },
+    { "src": "/(.*)", "dest": "/public/$1" }
   ],
   "functions": {
     "api/v1/[...path].js": {
