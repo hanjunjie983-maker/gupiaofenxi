@@ -124,7 +124,7 @@ export function createServer(options = {}) {
       });
 
       if (!url.pathname.startsWith('/health')) {
-        const rl = checkRateLimit(req.socket.remoteAddress || 'unknown', { capacity: config.rateLimitPerMinute, refillPerSecond: config.rateLimitPerMinute / 60 });
+        const rl = checkRateLimit(req.socket?.remoteAddress || 'unknown', { capacity: config.rateLimitPerMinute, refillPerSecond: config.rateLimitPerMinute / 60 });
         if (!rl.allowed) {
           logger.warn('rate_limited', { request_id: requestId, path: url.pathname });
           res.setHeader('retry-after', String(rl.retryAfterSeconds));
@@ -676,6 +676,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`FanliQuant M0 API listening on http://${config.host}:${config.port}`);
   });
 }
+
 
 
 
