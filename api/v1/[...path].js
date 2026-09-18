@@ -1,11 +1,10 @@
-import { createServer } from '../../src/http_server.js';
+import { createRequestHandler } from '../../src/http_server.js';
 import { loadConfig } from '../../src/config.js';
 import { createMemoryStore } from '../../src/store/memory.js';
 
 const config = loadConfig();
 const store = createMemoryStore();
-const server = createServer({ config, store });
-const requestListener = server.listeners('request')[0];
+const requestListener = createRequestHandler({ config, store });
 
 export default async function handler(req, res) {
   try {
@@ -23,4 +22,5 @@ export default async function handler(req, res) {
     res.end(JSON.stringify({ error: err.message, stack: err.stack }));
   }
 }
+
 

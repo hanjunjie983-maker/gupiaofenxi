@@ -75,7 +75,7 @@ async function serveStatic(pathname) {
   }
 }
 
-export function createServer(options = {}) {
+export function createRequestHandler(options = {}) {
   const config = options.config || loadConfig();
   const store = options.store || createMemoryStore();
   const fetchImpl = options.fetchImpl || globalThis.fetch;
@@ -114,7 +114,7 @@ export function createServer(options = {}) {
     };
   };
 
-  const server = http.createServer(async (req, res) => {
+  return async (req, res) => {
     const method = req.method || 'GET';
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
@@ -695,9 +695,11 @@ export function createServer(options = {}) {
       logger.error('unhandled_error', { request_id: requestId, path: url.pathname, error: err.message });
       return sendJson(res, 500, { code: 50000, message: err.message });
     }
-  });
+  };
+}
 
-  return server;
+export function createServer(options = {}) {
+  return http.createServer(createRequestHandler(options));
 }
 
 // Direct-run entrypoint: `node src/http_server.js`
@@ -713,6 +715,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`FanliQuant M0 API listening on http://${config.host}:${config.port}`);
   });
 }
+
 
 
 
