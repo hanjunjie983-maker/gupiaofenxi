@@ -1,13 +1,12 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "api/index.js", "use": "@vercel/node" },
-    { "src": "public/**", "use": "@vercel/static" }
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/api/v1/(.*)", "destination": "/api/index?__path=$1" },
+    { "source": "/v1/(.*)", "destination": "/api/index?__path=$1" }
   ],
-  "routes": [
-    { "src": "/api/v1/(.*)", "dest": "/api/index?__path=$1" },
-    { "src": "/v1/(.*)", "dest": "/api/index?__path=$1" },
-    { "src": "/", "dest": "/public/index.html" },
-    { "src": "/(.*)", "dest": "/public/$1" }
-  ]
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  }
 }
