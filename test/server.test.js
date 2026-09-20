@@ -1115,6 +1115,17 @@ test('fund data parsers extract fund info and holdings', () => {
   assert.equal(holdings.holdings[0].weight, 0.095);
 });
 
+test('parseHoldings handles the modern 9-column holdings table', () => {
+  const html = `截止至：<font class='px12'>2026-06-30</font></label></h4><table class='w782 comm tzxq'><thead><tr><th class='first'>序号</th><th>股票代码</th><th>股票名称</th><th>最新价</th><th>涨跌幅</th><th class='xglj'>相关资讯</th><th>占净值<br />比例</th><th class='cgs'>持股数<br />（万股）</th><th class='last ccs'>持仓市值<br />（万元）</th></tr></thead><tbody><tr><td>1</td><td><a href='//quote.eastmoney.com/unify/r/1.688200'>688200</a></td><td class='tol'><a href='#'>华峰测控</a></td><td class='tor'><span data-id='dq688200'></span></td><td class='tor'><span data-id='zd688200'></span></td><td class='xglj'><a href='#'>变动详情</a></td><td class='tor'>9.15%</td><td class='tor'>245.15</td><td class='tor'>128,727.21</td></tr><tr><td>2</td><td><a href='#'>002371</a></td><td class='tol'><a href='#'>北方华创</a></td><td class='tor'><span data-id='dq002371'></span></td><td class='tor'><span data-id='zd002371'></span></td><td class='xglj'><a href='#'>变动详情</a></td><td class='tor'>8.82%</td><td class='tor'>100.00</td><td class='tor'>90,000.00</td></tr></tbody></table>`;
+  const holdings = parseHoldings(html);
+  assert.equal(holdings.reportDate, '2026-06-30');
+  assert.equal(holdings.holdings.length, 2);
+  assert.equal(holdings.holdings[0].code, '688200');
+  assert.equal(holdings.holdings[0].name, '华峰测控');
+  assert.equal(holdings.holdings[0].weight, 0.0915);
+  assert.equal(holdings.holdings[1].weight, 0.0882);
+});
+
 test('fund page and API references are served', async () => {
   const server = createServer({ config: loadConfig(), store: createMemoryStore(), fetchImpl: mockFetch });
   const base = await listen(server);

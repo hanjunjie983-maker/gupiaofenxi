@@ -49,11 +49,13 @@ function managerScore(manager) {
 function aggregateHoldings(holdings, analyses) {
   const valid = analyses.filter((x) => x && !x.error && x.report);
   if (!valid.length) return null;
-  const wsum = valid.reduce((s, x) => s + (x.holding.weight || 0), 0) || 1;
+  // 权重缺失或全为 0 时退回等权，避免整只基金因为持仓权重抓不到而被算成 0 分。
+  const rawSum = valid.reduce((s, x) => s + (Number(x.holding.weight) > 0 ? Number(x.holding.weight) : 0), 0);
+  const weightOf = (x) => (rawSum > 0 ? (Number(x.holding.weight) > 0 ? Number(x.holding.weight) : 0) / rawSum : 1 / valid.length);
   const weighted = (pick) => valid.reduce((s, x) => {
     const v = pick(x);
-    return s + (Number.isFinite(v) ? v : 0) * (x.holding.weight || 0);
-  }, 0) / wsum;
+    return s + (Number.isFinite(v) ? v : 0) * weightOf(x);
+  }, 0);
   const scoreOf = (v) => Number.isFinite(v) ? v : null;
   return {
     score: weighted((x) => scoreOf(x.report.smart_recommendation?.score) ?? scoreOf(x.report.worth_buying_probability?.P_worth_buying * 100) ?? 50),

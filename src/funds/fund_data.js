@@ -42,15 +42,28 @@ export function parseHoldings(text) {
   const reportDate = reportMatch ? reportMatch[1].trim() : null;
   const rows = text.match(/<tr>[\s\S]*?<\/tr>/g) || [];
   const holdings = [];
+  // 现代版持仓表列数会变（多了最新价/涨跌幅/相关资讯），按表头定位列，避免取错单元格。
+  const headerRow = rows.find((r) => /<th/.test(r)) || '';
+  const headers = [...headerRow.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => stripTags(m[1]));
+  const idxOf = (keys) => headers.findIndex((h) => keys.some((k) => h.includes(k)));
+  const codeIdx = idxOf(['股票代码', '证券代码', '债券代码']);
+  const nameIdx = idxOf(['股票名称', '证券名称', '债券名称']);
+  const weightIdx = idxOf(['占净值', '净值比例', '占基金']);
   for (const row of rows) {
+    if (/<th/.test(row)) continue;
     const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => stripTags(m[1]));
     if (cells.length < 5) continue;
     const seq = Number(cells[0]);
     if (!Number.isFinite(seq)) continue;
-    const code = cells[1];
-    const name = cells[2];
-    const weight = Number(String(cells[4]).replace('%', ''));
-    if (!/^\d{6}$/.test(code) || !Number.isFinite(weight)) continue;
+    const code = (codeIdx >= 0 ? cells[codeIdx] : cells[1]) || '';
+    const name = (nameIdx >= 0 ? cells[nameIdx] : cells[2]) || '';
+    let raw = weightIdx >= 0 ? cells[weightIdx] : null;
+    if (raw === null || raw === undefined || !/\d/.test(String(raw))) {
+      const scanFrom = codeIdx >= 0 ? codeIdx + 1 : 0;
+      raw = cells.slice(scanFrom).find((c) => /^\d+(\.\d+)?%$/.test(String(c).trim()));
+    }
+    const weight = Number(String(raw ?? '').replace('%', '').trim());
+    if (!/^\d{6}$/.test(code) || !Number.isFinite(weight) || weight <= 0) continue;
     holdings.push({ code, name, weight: weight / 100 });
   }
   return { reportDate, holdings };

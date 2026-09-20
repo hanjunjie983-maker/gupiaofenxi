@@ -4,8 +4,9 @@ import { fetchStockUniverse, STATIC_FALLBACK_UNIVERSE, STATIC_FALLBACK_NAMES } f
 export const DEFAULT_WORTH_BUYING_TICKERS = STATIC_FALLBACK_UNIVERSE;
 const cache = new Map();
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const DEFAULT_BUDGET_MS = 40000;
-const ANALYSIS_CONCURRENCY = 3;
+const DEFAULT_BUDGET_MS = 30000;
+const ANALYSIS_CONCURRENCY = 4;
+const DAILY_CANDIDATES = 14;
 
 // 带时间预算的并发执行：超过 deadline 后不再启动新任务，保证接口能在平台超时前返回结果。
 async function mapLimit(items, limit, fn, { budgetMs = DEFAULT_BUDGET_MS, concurrency = limit } = {}) {
@@ -54,7 +55,7 @@ export async function getWorthBuyingRanking({ tickers, store, config, fetchImpl,
   if (Array.isArray(tickers) && tickers.length) {
     list = [...new Set(tickers.map((t) => String(t).trim()).filter(Boolean))].slice(0, 12);
   } else {
-    const universe = await fetchStockUniverse({ fetchImpl, limit: 20 });
+    const universe = await fetchStockUniverse({ fetchImpl, limit: DAILY_CANDIDATES });
     source = universe.source;
     list = universe.candidates.map((x) => x.code);
     for (const c of universe.candidates) if (c.name) names.set(c.code, c.name);
@@ -147,6 +148,8 @@ export async function getDailyRecommendations(args = {}) {
   const value = {
     ...ranking,
     date: today,
+    count: Math.min(10, ranking.results.length),
+    results: ranking.results.slice(0, 10),
     title: '每日值得看十支（研究用排名）',
     note: `${ranking.universe_note}每日名单会随行情与轮换变化，不构成投资建议。`
   };

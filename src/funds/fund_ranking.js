@@ -6,8 +6,9 @@ import { withHostHeaders } from '../ingest/base.js';
 export const DEFAULT_FUNDS = STATIC_FUND_UNIVERSE.map((code) => ({ code, theme: null }));
 const cache = new Map();
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_BUDGET_MS = 35000;
-const ANALYSIS_CONCURRENCY = 3;
+const DEFAULT_BUDGET_MS = 25000;
+const ANALYSIS_CONCURRENCY = 4;
+const DAILY_CANDIDATES = 8;
 
 // 带时间预算的并发执行：超过 deadline 后不再启动新任务，保证接口能在平台超时前返回结果。
 async function mapLimit(items, limit, fn, { budgetMs = DEFAULT_BUDGET_MS, concurrency = limit } = {}) {
@@ -65,11 +66,11 @@ export async function getDailyFundRanking({ store, config, fetchImpl, capital = 
   const cached = cache.get(key);
   if (cached && Date.now() - cached.at < DAY_MS) return { ...cached.value, cached: true };
 
-  const universe = await fetchFundUniverse({ fetchImpl, limit: 12 });
-  const codes = universe.candidates.map((x) => x.code).slice(0, 10);
+  const universe = await fetchFundUniverse({ fetchImpl, limit: DAILY_CANDIDATES });
+  const codes = universe.candidates.map((x) => x.code).slice(0, DAILY_CANDIDATES);
   const universeNames = new Map(universe.candidates.map((x) => [x.code, x.name]).filter(([, n]) => n));
   const results = await mapLimit(codes, 2, async (code) => {
-    try { return await analyzeFund(code, { store, config, fetchImpl, capital, riskLevel, maxHoldings: 2 }); }
+    try { return await analyzeFund(code, { store, config, fetchImpl, capital, riskLevel, maxHoldings: 1 }); }
     catch (err) { return { code, name: code, error: err.message }; }
   }, { budgetMs, concurrency: ANALYSIS_CONCURRENCY });
 

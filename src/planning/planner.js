@@ -192,8 +192,8 @@ export async function generateUnifiedPlan({ store, config, fetchImpl, capital = 
   if (cached && Date.now() - cached.at < 10 * 60 * 1000) return { ...cached.value, cached: true };
 
   const [stockRanking, fundRanking] = await Promise.all([
-    getWorthBuyingRanking({ store, config, fetchImpl, budgetMs: budgetMs ?? 30000 }),
-    getDailyFundRanking({ store, config, fetchImpl, capital, riskLevel, budgetMs: budgetMs ?? 25000 })
+    getWorthBuyingRanking({ store, config, fetchImpl, budgetMs: budgetMs ?? 26000 }),
+    getDailyFundRanking({ store, config, fetchImpl, capital, riskLevel, budgetMs: budgetMs ?? 22000 })
   ]);
 
   const allocation = allocateSleeves({ capital, riskLevel, stocks: stockRanking.results, funds: fundRanking.results });
