@@ -76,7 +76,7 @@ export async function getWorthBuyingRanking({ tickers, store, config, fetchImpl,
       : (names.get(ticker) || STATIC_FALLBACK_NAMES[ticker] || ticker);
     return {
       ticker: report.ticker,
-      name: resolvedName,
+      name: String(resolvedName).replace(/\s+/g, ''),
       price: report.price,
       P_worth_buying: report.worth_buying_probability?.P_worth_buying ?? null,
       P_worth_buying_heuristic: report.worth_buying_probability?.P_worth_buying_heuristic ?? null,
