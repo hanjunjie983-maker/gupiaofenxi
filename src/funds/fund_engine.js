@@ -79,19 +79,22 @@ export async function computeFundAnalysis({ fund, store, config, fetchImpl, capi
   const nav = navMetrics(fund.net_worth_trend || []);
   const mom = momentumScore(fund.returns || {});
   const mgr = managerScore(fund.manager);
-  const riskScore = clamp(100 - (nav.volatility ?? 0.3) * 150 - Math.abs(nav.maxDrawdown ?? -0.15) * 150);
+  // 风险曲线按“股混基金正常波动区间”标定：年化波动 15% 以内、回撤 20% 以内不扣分，
+  // 超出部分按比例扣分，避免正常波动的基金一律被打到 0 分。
+  const volExcess = Math.max(0, (nav.volatility ?? 0.20) - 0.15);
+  const ddExcess = Math.max(0, Math.abs(nav.maxDrawdown ?? -0.15) - 0.20);
+  const riskScore = clamp(100 - volExcess * 120 - ddExcess * 100);
   const holdingsScore = agg?.score ?? 50;
   const fundScore = Number((holdingsScore * 0.5 + mom * 0.25 + riskScore * 0.15 + mgr * 0.10).toFixed(2));
 
-  let action = '观望';
-  if (fundScore >= 75) action = '重点配置';
-  else if (fundScore >= 65) action = '可分批配置';
-  else if (fundScore >= 50) action = '持有观察';
-  else if (fundScore >= 35) action = '减仓谨慎';
-  else action = '暂不配置';
+  let action = '暂不配置';
+  if (fundScore >= 70) action = '重点配置';
+  else if (fundScore >= 58) action = '可分批配置';
+  else if (fundScore >= 45) action = '持有观察';
+  else if (fundScore >= 33) action = '谨慎观察';
 
   const profileCap = riskLevel === 'conservative' ? 0.08 : riskLevel === 'aggressive' ? 0.25 : 0.15;
-  const positionPct = clamp((fundScore - 40) / 60, 0, 1) * profileCap;
+  const positionPct = clamp((fundScore - 35) / 50, 0, 1) * profileCap;
   const amount = Math.round(capital * positionPct);
 
   const holdingDetails = analyses.map((x, i) => ({
@@ -128,6 +131,7 @@ export async function computeFundAnalysis({ fund, store, config, fetchImpl, capi
     holdings_report_date: fund.holdings_report_date,
     holdings: holdingDetails,
     fanli,
+    recommendation_reason: `近一年收益 ${fund.returns?.oneYear ?? '—'}%，净值波动 ${nav.volatility === null ? '—' : (nav.volatility * 100).toFixed(1) + '%'}，最大回撤 ${nav.maxDrawdown === null ? '—' : (nav.maxDrawdown * 100).toFixed(1) + '%'}；持仓股票平均智能分 ${holdingsScore.toFixed(1)}，因此建议“${action}”。`,
     reasons: [
       `基金综合评分 ${fundScore}/100`,
       `基金动量 ${mom.toFixed(1)}/100`,
@@ -142,5 +146,6 @@ export async function computeFundAnalysis({ fund, store, config, fetchImpl, capi
     disclaimer: '基金评分与推荐为研究模型输出，不构成投资建议，不承诺收益。'
   };
 }
+
 
 

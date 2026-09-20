@@ -1,7 +1,6 @@
 import { mulberry32, mean, std, quantile } from '../probability/math.js';
 import { getWorthBuyingRanking } from '../rankings/worth_buying_ranking.js';
-import { getDailyFundRanking, getFundDetail } from '../funds/fund_ranking.js';
-import { analyzeTicker } from '../analysis/analyzer.js';
+import { getDailyFundRanking } from '../funds/fund_ranking.js';
 
 export const RISK_PROFILES = {
   conservative: { label: '保守型', stock: 0.30, fund: 0.50, cash: 0.20, maxSingleStock: 0.05, maxSingleFund: 0.15 },
@@ -9,24 +8,38 @@ export const RISK_PROFILES = {
   aggressive: { label: '进取型', stock: 0.65, fund: 0.25, cash: 0.10, maxSingleStock: 0.12, maxSingleFund: 0.20 }
 };
 
+// 分批建仓比例：先建 40%，确认后再补 30% / 30%，避免一次性买在高点。
+export const TRANCHE_PLAN = [0.4, 0.3, 0.3];
+
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
 export function allocateSleeves({ capital, riskLevel = 'balanced', stocks = [], funds = [] }) {
   const profile = RISK_PROFILES[riskLevel] || RISK_PROFILES.balanced;
   const stockBudget = capital * profile.stock;
   const fundBudget = capital * profile.fund;
-  const cash = capital * profile.cash;
 
-  const stockScores = stocks.slice(0, 10).map((s) => s.smart_score ?? s.P_worth_buying * 100 ?? 50);
-  const fundScores = funds.slice(0, 8).map((f) => f.fund_score ?? 50);
+  const stockScores = stocks.slice(0, 10).map((s) => s.final_score ?? s.smart_score ?? (Number.isFinite(s.P_worth_buying) ? s.P_worth_buying * 100 : null) ?? 50);
+  const fundScores = funds.slice(0, 8).map((f) => f.final_score ?? f.fund_score ?? 50);
   const stockSum = stockScores.reduce((a, b) => a + b, 0) || 1;
   const fundSum = fundScores.reduce((a, b) => a + b, 0) || 1;
 
   const stockAlloc = stocks.slice(0, 10).map((s, i) => ({
-    ticker: s.ticker, name: s.name, score: s.smart_score ?? null, weight: (stockScores[i] / stockSum) * profile.stock, amount: Math.round((stockScores[i] / stockSum) * stockBudget)
+    ticker: s.ticker,
+    name: s.name,
+    score: s.final_score ?? s.smart_score ?? null,
+    action: s.smart_action || s.action || null,
+    relative_rank: s.relative_rank ?? null,
+    weight: (stockScores[i] / stockSum) * profile.stock,
+    amount: Math.round((stockScores[i] / stockSum) * stockBudget)
   }));
   const fundAlloc = funds.slice(0, 8).map((f, i) => ({
-    code: f.code, name: f.name, score: f.fund_score ?? null, weight: (fundScores[i] / fundSum) * profile.fund, amount: Math.round((fundScores[i] / fundSum) * fundBudget)
+    code: f.code,
+    name: f.name,
+    score: f.final_score ?? f.fund_score ?? null,
+    action: f.action || null,
+    relative_rank: f.relative_rank ?? null,
+    weight: (fundScores[i] / fundSum) * profile.fund,
+    amount: Math.round((fundScores[i] / fundSum) * fundBudget)
   }));
 
   // 单标的上限后重新归一化
@@ -129,71 +142,168 @@ export function buildSchedule({ horizonMonths = 12, now = new Date() }) {
   return schedule;
 }
 
+// 把资金拆成三笔的建仓时间表（金额同样按比例拆分，不预测价格）。
+export function buildBuyPlan({ capital, stockAmount, fundAmount, horizonMonths = 12, now = new Date() }) {
+  const investable = stockAmount + fundAmount;
+  const offsets = [1, 30, 60];
+  const notes = [
+    '首笔建仓：先投入 40% 的可投资金，避免一次性买在高点。',
+    '第二笔：若基本面、估值或行业景气未恶化，再投入 30%。',
+    '第三笔：完成剩余 30%，之后进入定期复盘与再平衡。'
+  ];
+  const rows = TRANCHE_PLAN.map((ratio, i) => ({
+    step: i + 1,
+    date: new Date(now.getTime() + offsets[i] * 86400000).toISOString().slice(0, 10),
+    ratio,
+    amount: Math.round(investable * ratio),
+    stock_amount: Math.round(stockAmount * ratio),
+    fund_amount: Math.round(fundAmount * ratio),
+    note: notes[i]
+  }));
+  rows.push({
+    step: 4,
+    date: new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10),
+    ratio: 0,
+    amount: 0,
+    stock_amount: 0,
+    fund_amount: 0,
+    note: `第 4 步起每 3 个月复盘一次，最长跟踪 ${horizonMonths} 个月；只在条件变化时买卖，不按固定日预测价格。`
+  });
+  return { investable_amount: Math.round(investable), tranches: rows };
+}
+
+export function buildSellRules({ maxDrawdown = 0.15 } = {}) {
+  const dd = Math.round(maxDrawdown * 100);
+  return [
+    { condition: '基本面恶化（ROIC、现金流或毛利率连续两期明显下滑）', action: '先减半仓，重新做完整分析' },
+    { condition: '行业景气度跌破 0.35 或政策/需求逻辑反转', action: '降低该行业权重，把仓位换到更稳的品种' },
+    { condition: `组合回撤接近 ${dd}%（本轮设定的最大回撤）`, action: '减仓到计划最低仓位，保留现金等更好的赔率' },
+    { condition: '估值分位升到历史高位且盈利预期不再上调', action: '分批止盈，不追求卖在最高点' },
+    { condition: '出现风险项 >= 3 个（如流动性差、财报临近、质押偏高）', action: '暂停加仓，等风险落地再评估' },
+    { condition: '资金用途变化或投资期限缩短', action: '优先降低波动，而不是追求收益' }
+  ];
+}
+
 const planCache = new Map();
 
-export async function generateUnifiedPlan({ store, config, fetchImpl, capital = 1000000, riskLevel = 'balanced', horizonMonths = 12, maxDrawdown = 0.15 }) {
+export async function generateUnifiedPlan({ store, config, fetchImpl, capital = 1000000, riskLevel = 'balanced', horizonMonths = 12, maxDrawdown = 0.15, budgetMs } = {}) {
   const cacheKey = `${capital}:${riskLevel}:${horizonMonths}:${maxDrawdown}`;
   const cached = planCache.get(cacheKey);
-  if (cached && Date.now() - cached.at < 60 * 60 * 1000) return { ...cached.value, cached: true };
+  if (cached && Date.now() - cached.at < 10 * 60 * 1000) return { ...cached.value, cached: true };
+
   const [stockRanking, fundRanking] = await Promise.all([
-    getWorthBuyingRanking({ store, config, fetchImpl }),
-    getDailyFundRanking({ store, config, fetchImpl, capital, riskLevel })
+    getWorthBuyingRanking({ store, config, fetchImpl, budgetMs: budgetMs ?? 30000 }),
+    getDailyFundRanking({ store, config, fetchImpl, capital, riskLevel, budgetMs: budgetMs ?? 25000 })
   ]);
 
-  const topStocks = stockRanking.results.slice(0, 4);
-  const topFunds = fundRanking.results.slice(0, 3);
-  const stockDetails = await Promise.all(topStocks.map(async (s) => {
-    try { return await analyzeTicker({ ticker: s.ticker, store, config, fetchImpl, capital, riskLevel }); }
-    catch { return null; }
-  }));
-  const fundDetails = await Promise.all(topFunds.map(async (f) => {
-    try { return await getFundDetail({ code: f.code, store, config, fetchImpl, capital, riskLevel }); }
-    catch { return null; }
-  }));
-
-  const assets = [];
-  for (const d of stockDetails.filter(Boolean)) {
-    const vol = d.factors?.vol_20d?.raw ?? 0.30;
-    const expected = d.backtest?.metrics?.annualized_return ?? 0.05;
-    assets.push({ ticker: d.ticker, name: d.name, weight: 0, expectedAnnualReturn: clamp(expected, -0.20, 0.30), annualVolatility: clamp(vol, 0.12, 0.80) });
-  }
-  for (const d of fundDetails.filter(Boolean)) {
-    const vol = d.nav_metrics?.volatility ?? 0.20;
-    const expected = (d.returns?.oneYear ?? 5) / 100;
-    assets.push({ code: d.code, name: d.name, weight: 0, expectedAnnualReturn: clamp(expected, -0.20, 0.30), annualVolatility: clamp(vol, 0.08, 0.60) });
-  }
-
   const allocation = allocateSleeves({ capital, riskLevel, stocks: stockRanking.results, funds: fundRanking.results });
-  const assetMap = new Map(assets.map((a) => [a.ticker || a.code, a]));
-  for (const a of [...allocation.stocks, ...allocation.funds]) {
-    const key = a.ticker || a.code;
-    const hit = assetMap.get(key);
-    if (hit) { hit.weight = a.weight; hit.amount = a.amount; }
+  const stockByTicker = new Map(stockRanking.results.map((r) => [r.ticker, r]));
+  const fundByCode = new Map(fundRanking.results.map((r) => [r.code, r]));
+
+  // 情景模拟直接复用榜单里的真实统计量，避免重复抓取导致接口超时。
+  const assets = [];
+  for (const row of allocation.stocks) {
+    const src = stockByTicker.get(row.ticker) || {};
+    assets.push({
+      ticker: row.ticker,
+      name: row.name,
+      weight: row.weight,
+      amount: row.amount,
+      expectedAnnualReturn: clamp(Number.isFinite(src.annualized_return) ? src.annualized_return : 0.05, -0.20, 0.30),
+      annualVolatility: clamp(Number.isFinite(src.volatility) ? src.volatility : 0.30, 0.12, 0.80)
+    });
+  }
+  for (const row of allocation.funds) {
+    const src = fundByCode.get(row.code) || {};
+    const oneYear = Number(src.returns?.oneYear);
+    assets.push({
+      code: row.code,
+      name: row.name,
+      weight: row.weight,
+      amount: row.amount,
+      expectedAnnualReturn: clamp(Number.isFinite(oneYear) ? oneYear / 100 : 0.05, -0.20, 0.30),
+      annualVolatility: clamp(Number.isFinite(src.nav_metrics?.volatility) ? src.nav_metrics.volatility : 0.20, 0.08, 0.60)
+    });
   }
 
   const simulation = simulatePlan({ assets, capital, horizonMonths });
   const schedule = buildSchedule({ horizonMonths });
+  const stockAmount = allocation.stocks.reduce((s, x) => s + x.amount, 0);
+  const fundAmount = allocation.funds.reduce((s, x) => s + x.amount, 0);
+  const buyPlan = buildBuyPlan({ capital, stockAmount, fundAmount, horizonMonths });
+  const sellRules = buildSellRules({ maxDrawdown });
+
+  const selectedStocks = allocation.stocks.map((row) => {
+    const src = stockByTicker.get(row.ticker) || {};
+    return {
+      ticker: row.ticker,
+      name: row.name,
+      action: src.smart_action || row.action,
+      absolute_action: src.smart_action_absolute || null,
+      why_not_absolute: src.smart_action_absolute && src.smart_action_absolute !== src.smart_action
+        ? `绝对评分对应的原始结论是“${src.smart_action_absolute}”，进入今日相对排名后调整为“${src.smart_action}”。`
+        : null,
+      score: row.score,
+      final_score: src.final_score ?? null,
+      relative_rank: src.relative_rank ?? row.relative_rank,
+      candidate_count: src.candidate_count ?? null,
+      P_worth_buying: src.P_worth_buying ?? null,
+      fanli_score: src.fanli_score ?? null,
+      price: src.price ?? null,
+      risks: src.risks || [],
+      reason: src.recommendation_reason || null,
+      weight: row.weight,
+      amount: row.amount
+    };
+  });
+  const selectedFunds = allocation.funds.map((row) => {
+    const src = fundByCode.get(row.code) || {};
+    return {
+      code: row.code,
+      name: row.name,
+      action: src.action || row.action,
+      absolute_action: src.action_absolute || null,
+      score: row.score,
+      final_score: src.final_score ?? null,
+      relative_rank: src.relative_rank ?? row.relative_rank,
+      candidate_count: src.candidate_count ?? null,
+      one_year_return: src.returns?.oneYear ?? null,
+      max_drawdown: src.nav_metrics?.maxDrawdown ?? null,
+      reason: src.recommendation_reason || null,
+      weight: row.weight,
+      amount: row.amount
+    };
+  });
 
   const plan = {
     as_of: new Date().toISOString().slice(0, 10),
-    plain_summary: `按你的资金和风险偏好，建议股票约 ${Math.round(allocation.allocation.stock_weight * 100)}%、基金约 ${Math.round(allocation.allocation.fund_weight * 100)}%、现金约 ${Math.round(allocation.allocation.cash_weight * 100)}%。未来金额是概率区间，不是保证收益，也不是某一天一定到某个价格。`,
+    plain_summary: `按你的资金和风险偏好，建议股票约 ${Math.round(allocation.allocation.stock_weight * 100)}%、基金约 ${Math.round(allocation.allocation.fund_weight * 100)}%、现金约 ${Math.round(allocation.allocation.cash_weight * 100)}%。分三笔建仓，单笔金额见“分批建仓时间表”；未来金额是概率区间，不是保证收益，也不是某一天一定到某个价格。`,
     capital,
     risk_level: riskLevel,
+    risk_profile_label: allocation.profile,
     horizon_months: horizonMonths,
     max_drawdown_limit: maxDrawdown,
     allocation,
-    selected_stocks: stockDetails.filter(Boolean).map((d) => ({ ticker: d.ticker, name: d.name, action: d.smart_recommendation?.action, score: d.smart_recommendation?.score, position: allocation.stocks.find((x) => x.ticker === d.ticker) })),
-    selected_funds: fundDetails.filter(Boolean).map((d) => ({ code: d.code, name: d.name, action: d.action, score: d.fund_score, position: allocation.funds.find((x) => x.code === d.code) })),
+    buy_plan: buyPlan,
+    selected_stocks: selectedStocks,
+    selected_funds: selectedFunds,
+    sell_rules: sellRules,
     simulation,
     schedule,
-    warnings: ['本规划是研究模型输出，不构成投资建议。', '未来收益与回撤均为概率分布，不是确定预测。', '实际执行需考虑税费、滑点、流动性与个人情况。'],
+    data_sources: {
+      stock_universe: stockRanking.universe_source,
+      stock_universe_note: stockRanking.universe_note,
+      fund_universe: fundRanking.universe_source,
+      fund_universe_note: fundRanking.universe_note
+    },
+    warnings: [
+      '本规划是研究模型输出，不构成投资建议。',
+      '未来收益与回撤均为概率分布，不是确定预测，无法预知某一天的具体价格。',
+      '实际执行需考虑税费、滑点、流动性与个人情况。',
+      '名单每天会变化，建议按时间表复盘，而不是按单一日的结论长期不动。'
+    ],
     disclaimer: '本统一投资规划中心仅用于研究与风险管理，不承诺收益，不保证精准，不替代持牌投资顾问。'
   };
   planCache.set(cacheKey, { at: Date.now(), value: plan });
   return { ...plan, cached: false };
 }
-
-
-
-
-

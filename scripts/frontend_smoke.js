@@ -43,7 +43,7 @@ try {
     j('/v1/stocks/AAPL/fanli-v2'), j('/v1/stocks/AAPL/fundamentals'), j('/v1/stocks/AAPL/factor-table'), j('/v1/stocks/AAPL/probability-v2'), fetch(`${base}/stock.html`).then((r) => r.text()), fetch(`${base}/js/stock.js`).then((r) => r.text())
   ]);
   const report = {
-    ok: fanli.code === 0 && fundamentals.code === 0 && factorTable.code === 0 && probability.code === 0 && stockHtml.includes('范蠡六维 V2') && stockJs.includes('/probability-v2'),
+    ok: fanli.code === 0 && fundamentals.code === 0 && factorTable.code === 0 && probability.code === 0 && /范蠡六维 V[23]/.test(stockHtml) && stockJs.includes('/probability-v2'),
     fanli_status: fanli.data.fanli.status,
     fundamentals_period: fundamentals.data.period_end,
     factor_table_factors: Object.keys(factorTable.data.factors).length,

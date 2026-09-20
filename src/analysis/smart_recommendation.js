@@ -14,13 +14,6 @@ export function computeSmartRecommendation({ fanli = {}, fanliSummary = null, wo
   const rawScore = (fanliScore / 10) * 35 + pWorth * 30 + pPositive * 15 + sharpeScore + dataCompleteness * 10 - riskPenalty;
   const score = Number(clamp(rawScore, 0, 100).toFixed(2));
 
-  let action = '观望';
-  if (score >= 75 && pWorth >= 0.6 && risks.length <= 1) action = '分批买入';
-  else if (score >= 65) action = '可分批建仓 / 重点关注';
-  else if (score >= 50) action = '持有 / 观察';
-  else if (score >= 35) action = '减仓 / 谨慎';
-  else action = '暂不买入 / 观望';
-
   const momRaw = Number(fanli?.dimensions?.['择人任时']?.score) >= 6;
   const cycleGood = Number(industry?.cycle_score) >= 0.5;
   const valuationGood = Number.isFinite(valuation?.pe) && Number(valuation.pe) < 30;
@@ -44,6 +37,15 @@ export function computeSmartRecommendation({ fanli = {}, fanliSummary = null, wo
     { key: 'risk', label: '风险项 >= 3', pass: risks.length >= 3 }
   ];
 
+  // 分档只看绝对分，避免“行情偏冷时全站只有一种结论”；减仓类结论必须由卖出信号触发。
+  const sellTriggered = sellSignals.filter((x) => x.pass).length;
+  let action = '暂不买入 / 观望';
+  if (sellTriggered >= 3) action = '风险偏高 / 规避';
+  else if (score >= 70) action = '分批买入';
+  else if (score >= 58) action = '可分批建仓 / 重点关注';
+  else if (score >= 45) action = '持有观察';
+  else if (score >= 35) action = '谨慎观察';
+
   const price = Number(valuation?.price);
   const annualVol = Number.isFinite(volatility) && volatility > 0 ? volatility : 0.30;
   const entryPlan = [];
@@ -62,7 +64,10 @@ export function computeSmartRecommendation({ fanli = {}, fanliSummary = null, wo
     fanli_label: fanliSummary?.label || null,
     position_suggestion: positionAdvice ? { position_pct: positionAdvice.suggested_position_pct, amount: positionAdvice.suggested_amount, risk_budget_amount: positionAdvice.risk_budget_amount } : null,
     buy_signals: buySignals,
+    met_conditions: buySignals.filter((x) => x.pass).map((x) => x.label),
+    unmet_conditions: buySignals.filter((x) => !x.pass).map((x) => x.label),
     sell_signals: sellSignals,
+    sell_signals_triggered: sellTriggered,
     entry_plan: entryPlan,
     reasons: [
       `范蠡六维 ${fanliScore.toFixed(2)}/10`,
@@ -79,6 +84,7 @@ export function computeSmartRecommendation({ fanli = {}, fanliSummary = null, wo
     disclaimer: '本智能买卖建议为研究模型输出，不构成投资建议，不承诺收益，不替代持牌投资顾问。'
   };
 }
+
 
 
 

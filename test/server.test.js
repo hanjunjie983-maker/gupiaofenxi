@@ -34,7 +34,10 @@ import { computeFanliSummary } from '../src/factors/fanli_summary.js';
 import { computeSmartRecommendation } from '../src/analysis/smart_recommendation.js';
 import { parsePingzhong, parseHoldings } from '../src/funds/fund_data.js';
 import { suggestFundPortfolio } from '../src/funds/fund_portfolio.js';
-import { allocateSleeves, simulatePlan, buildSchedule } from '../src/planning/planner.js';
+import { allocateSleeves, simulatePlan, buildSchedule, buildBuyPlan, buildSellRules } from '../src/planning/planner.js';
+import { recommendationFor } from '../src/rankings/worth_buying_ranking.js';
+import { rotateCandidates, fetchStockUniverse } from '../src/rankings/stock_universe.js';
+import { fundAction } from '../src/funds/fund_ranking.js';
 import { buildFeatures, buildSamples, trainFactorProbability } from '../src/probability/factor_probability.js';
 import { resetRateLimits } from '../src/observability/rate_limit.js';
 import { listTools, runTool } from '../src/agent/tools.js';
@@ -1192,4 +1195,84 @@ test('glossary and fund portfolio UI are served', async () => {
   } finally {
     server.close();
   }
+});
+
+test('ranking recommendations spread across buckets instead of all neutral', () => {
+  const labels = [
+    recommendationFor({ finalScore: 69.5, smartScore: 56.5, relativePercentile: 1 }),
+    recommendationFor({ finalScore: 62, smartScore: 52, relativePercentile: 0.8 }),
+    recommendationFor({ finalScore: 50, smartScore: 45, relativePercentile: 0.5 }),
+    recommendationFor({ finalScore: 40, smartScore: 38, relativePercentile: 0.3 }),
+    recommendationFor({ finalScore: 20, smartScore: 20, relativePercentile: 0 })
+  ];
+  assert.equal(labels[0], '分批买入');
+  assert.equal(labels[1], '可分批建仓 / 重点关注');
+  assert.ok(new Set(labels).size >= 4);
+  assert.equal(labels[4], '暂不买入 / 观望');
+  // 绝对分不够硬时不能因为排第一就给出买入结论
+  assert.equal(recommendationFor({ finalScore: 70, smartScore: 40, relativePercentile: 1 }), '可分批建仓 / 重点关注');
+});
+
+test('fund ranking actions use blended score and relative rank', () => {
+  assert.equal(fundAction({ finalScore: 63, fundScore: 51, relativePercentile: 1 }), '重点配置');
+  assert.equal(fundAction({ finalScore: 53, fundScore: 42, relativePercentile: 0.8 }), '可分批配置');
+  assert.equal(fundAction({ finalScore: 45, fundScore: 36, relativePercentile: 0.5 }), '持有观察');
+  assert.equal(fundAction({ finalScore: 30, fundScore: 25, relativePercentile: 0.05 }), '暂不配置');
+});
+
+test('daily candidate rotation changes membership between days', () => {
+  const pool = Array.from({ length: 30 }, (_, i) => ({ code: String(600000 + i), name: `股${i}` }));
+  const day1 = rotateCandidates(pool, { limit: 20, dayKey: '2026-09-19' }).map((x) => x.code).join(',');
+  const day2 = rotateCandidates(pool, { limit: 20, dayKey: '2026-09-20' }).map((x) => x.code).join(',');
+  const sameDay = rotateCandidates(pool, { limit: 20, dayKey: '2026-09-20' }).map((x) => x.code).join(',');
+  assert.notEqual(day1, day2);
+  assert.equal(day2, sameDay);
+  assert.ok(day1.split(',').slice(0, 8).every((code) => day2.split(',').includes(code)));
+});
+
+test('stock universe uses live snapshot when available and falls back offline', async () => {
+  const diff = Array.from({ length: 30 }, (_, i) => ({
+    f12: `60${String(1000 + i)}`,
+    f14: `测试股${i}`,
+    f2: 10 + i,
+    f3: i % 5,
+    f6: 1e9 + i * 1e8,
+    f8: 1,
+    f9: 12 + i,
+    f20: 5e10 + i * 1e9,
+    f21: 4e10,
+    f23: 1.5
+  }));
+  diff.push({ f12: '600001', f14: 'ST测试', f2: 1, f3: 0, f6: 1e6, f20: 1e9, f23: 1 });
+  const live = await fetchStockUniverse({
+    fetchImpl: async () => new Response(JSON.stringify({ data: { diff } }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    limit: 10,
+    dayKey: '2026-09-20'
+  });
+  assert.equal(live.source, 'eastmoney_clist');
+  assert.equal(live.candidates.length, 10);
+  assert.ok(live.candidates.every((c) => /^\d{6}$/.test(c.code) && c.name));
+  assert.ok(!live.candidates.some((c) => c.code === '600001'));
+
+  const offlineFetch = async () => { throw new Error('offline'); };
+  const fallback = await fetchStockUniverse({ fetchImpl: offlineFetch, limit: 10, dayKey: '2026-09-20' });
+  assert.equal(fallback.source, 'static_fallback');
+  assert.equal(fallback.candidates.length, 10);
+  assert.ok(fallback.candidates.every((c) => c.code && c.name && c.name !== c.code));
+  const nextDay = await fetchStockUniverse({ fetchImpl: offlineFetch, limit: 10, dayKey: '2026-09-27' });
+  assert.notEqual(fallback.candidates.map((c) => c.code).join(','), nextDay.candidates.map((c) => c.code).join(','));
+});
+
+test('unified plan exposes tranche amounts and sell rules', () => {
+  const buyPlan = buildBuyPlan({ capital: 1000000, stockAmount: 450000, fundAmount: 400000, horizonMonths: 12, now: new Date('2026-09-20T00:00:00Z') });
+  const trancheTotal = buyPlan.tranches.slice(0, 3).reduce((s, t) => s + t.amount, 0);
+  assert.equal(trancheTotal, 850000);
+  assert.equal(buyPlan.investable_amount, 850000);
+  assert.equal(buyPlan.tranches[0].ratio, 0.4);
+  assert.equal(buyPlan.tranches[0].date, '2026-09-21');
+  assert.ok(buyPlan.tranches[0].stock_amount + buyPlan.tranches[0].fund_amount > 0);
+  const rules = buildSellRules({ maxDrawdown: 0.15 });
+  assert.ok(rules.length >= 5);
+  assert.ok(rules.every((r) => r.condition && r.action));
+  assert.ok(rules.some((r) => r.condition.includes('15%')));
 });

@@ -122,6 +122,7 @@ function renderSmartRecommendation(s) {
     <p><strong>智能建议：</strong>${esc(s.action)} · 综合评分 ${esc(s.score)}/100 · 置信度 ${esc(s.confidence)}</p>
     ${s.position_suggestion ? `<p><strong>仓位参考：</strong>${pct(s.position_suggestion.position_pct)} · 金额 ${esc(s.position_suggestion.amount)} 元 · 风险预算 ${esc(s.position_suggestion.risk_budget_amount)} 元</p>` : ''}
     <p><strong>理由：</strong>${esc((s.reasons || []).join(' · '))}</p>
+    <p><strong>还差这些条件：</strong>${esc((s.unmet_conditions || []).join('、') || '主要条件已满足')}</p>
     <details><summary>展开：买入/卖出信号</summary>
       <p><strong>买入条件：</strong></p><ul>${signalList(s.buy_signals, '满足', '未满足')}</ul>
       <p><strong>卖出/减仓条件：</strong></p><ul>${signalList(s.sell_signals, '触发', '未触发')}</ul>
@@ -193,13 +194,14 @@ function renderRanking(data) {
     <td><a href="/?ticker=${encodeURIComponent(r.ticker)}">${esc(r.name)}</a><br><span class="missing">${esc(r.ticker)}</span></td>
     <td><strong>${pct(r.P_worth_buying)}</strong><br><span class="missing">${r.calibrated ? '已校准' : '启发式'}</span></td>
     <td>${esc(r.suggestion || '—')}<br><span class="missing">${esc(r.stock_type || '')}</span></td>
-    <td>${esc(r.smart_action || '—')}<br><span class="missing">评分 ${esc(r.smart_score ?? '—')}</span></td>
+    <td>${esc(r.smart_action || '—')}<br><span class="missing">绝对 ${esc(r.smart_score ?? '—')} · 相对第 ${esc(r.relative_rank ?? '—')} 名</span></td>
     <td>${esc(r.fanli_summary?.label || '—')}<br><span class="missing">${esc(r.fanli_summary?.recommendation || '')}</span></td>
-    <td>${esc(rankingReason(r))}</td>
+    <td>${esc(r.recommendation_reason || rankingReason(r))}</td>
     <td>${r.fund_holdings?.status === 'ok' ? esc((r.fund_holdings.funds || []).slice(0, 2).map((f) => f.fund_name).join('、') || '—') : '未接入'}</td>
   </tr>`).join('');
   return `<p>截至 ${esc(data.as_of)} · ${data.cached ? '缓存结果' : '实时计算'} · 概率越高只表示历史统计倾向越强，不是必涨。</p>
-    <table><thead><tr><th>排名</th><th>股票</th><th>值得买概率</th><th>建议</th><th>智能买卖</th><th>范蠡总评</th><th>简单理由</th><th>持有基金（示例）</th></tr></thead><tbody>${rows}</tbody></table>`;
+    <p class="missing">${esc(data.universe_note || '')}</p>
+    <table><thead><tr><th>排名</th><th>股票</th><th>值得买概率</th><th>建议</th><th>智能买卖</th><th>范蠡总评</th><th>为什么这样建议</th><th>持有基金（示例）</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function loadRanking(tickers) {
@@ -252,6 +254,7 @@ analyze();
 loadDashboard();
 loadRanking();
 loadWatchlist();
+
 
 
 
